@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: device-service-config
+  namespace: iot-backend
+data:
+  DB_HOST: device-db.iot-backend.svc.cluster.local
+  DB_PORT: "5432"
+  DB_NAME: device_db
+  EUREKA_URI: http://discovery-server.iot-backend.svc.cluster.local:8761/eureka/
+  MQTT_BROKER_URL: tcp://broker.hivemq.com:1883

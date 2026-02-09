@@ -1,0 +1,18 @@
+server:
+  port: ${SERVER_PORT:8084}
+
+spring:
+  application:
+    name: weather-service
+
+app:
+  weather:
+    api-key: ${WEATHER_API_KEY:}
+    base-url: https://api.openweathermap.org
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true

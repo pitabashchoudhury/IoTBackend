@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: iot-backend
+data:
+  DB_HOST: auth-db.iot-backend.svc.cluster.local
+  DB_PORT: "5432"
+  DB_NAME: auth_db
+  EUREKA_URI: http://discovery-server.iot-backend.svc.cluster.local:8761/eureka/

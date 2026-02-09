@@ -1,0 +1,57 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: auth-public
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/login,/api/auth/register
+          filters:
+            - StripPrefix=1
+
+        - id: auth-private
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthGatewayFilter
+
+        - id: device-service
+          uri: lb://device-service
+          predicates:
+            - Path=/api/devices/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthGatewayFilter
+
+        - id: weather-service
+          uri: lb://weather-service
+          predicates:
+            - Path=/api/weather/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthGatewayFilter
+
+        - id: device-ws
+          uri: lb://device-service
+          predicates:
+            - Path=/api/ws/**
+          filters:
+            - StripPrefix=1
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:default-secret-key-change-in-production-must-be-at-least-256-bits-long!!}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
