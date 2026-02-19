@@ -6,6 +6,10 @@ spring:
     name: weather-service
 
 app:
+  jwt:
+    secret: ${JWT_SECRET:default-secret-key-change-in-production-must-be-at-least-256-bits-long!!}
+    access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:3600000}
+    refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000}
   weather:
     api-key: ${WEATHER_API_KEY:}
     base-url: https://api.openweathermap.org
