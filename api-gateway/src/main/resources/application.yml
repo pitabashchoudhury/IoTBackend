@@ -45,6 +45,21 @@ spring:
           filters:
             - StripPrefix=1
 
+        - id: auth-swagger
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/v3/api-docs,/auth/swagger-ui.html,/auth/swagger-ui/**
+
+        - id: device-swagger
+          uri: lb://device-service
+          predicates:
+            - Path=/devices/v3/api-docs,/devices/swagger-ui.html,/devices/swagger-ui/**
+
+        - id: weather-swagger
+          uri: lb://weather-service
+          predicates:
+            - Path=/weather/v3/api-docs,/weather/swagger-ui.html,/weather/swagger-ui/**
+
 app:
   jwt:
     secret: ${JWT_SECRET:default-secret-key-change-in-production-must-be-at-least-256-bits-long!!}

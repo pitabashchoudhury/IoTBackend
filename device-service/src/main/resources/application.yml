@@ -26,6 +26,12 @@ app:
     keep-alive-interval: ${MQTT_KEEP_ALIVE:60}
     connection-timeout: ${MQTT_CONN_TIMEOUT:30}
 
+springdoc:
+  api-docs:
+    path: /devices/v3/api-docs
+  swagger-ui:
+    path: /devices/swagger-ui.html
+
 eureka:
   client:
     service-url:
