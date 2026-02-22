@@ -109,6 +109,14 @@ services:
       discovery-server:
         condition: service_healthy
 
+  iot-frontend:
+    build: ../iot-frontend
+    container_name: iot-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+
 volumes:
   auth_db_data:
   device_db_data:
