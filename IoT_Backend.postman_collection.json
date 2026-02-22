@@ -1,0 +1,1217 @@
+{
+  "info": {
+    "name": "IoT Backend API",
+    "_postman_id": "iot-backend-collection-001",
+    "description": "Complete API collection for IoT Backend microservices.\n\n## Quick Start\n1. Run `docker compose up --build -d`\n2. Seed DBs: `docker exec -i auth-db psql -U iot_user -d auth_db < init-auth-db.sql` and same for device-db\n3. Hit **Login (Pitabash)** first — token is auto-saved to collection variables\n4. All other requests use the saved token automatically\n\n## Seeded Users (password: password123)\n- pitabash@example.com (5 devices)\n- john@example.com (2 devices)\n- jane@example.com (1 device)\n\n## Collection Variables\n- `base_url` — API Gateway URL (default: http://localhost:8080)\n- `token` — JWT access token (auto-saved on login/register)\n- `refresh_token` — Refresh token (auto-saved)\n- `user_id` — Current user ID (auto-saved)\n- `device_id` — Last used device ID (auto-saved from list/create)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "device_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Authentication endpoints — register, login, refresh, profile.\n\nPublic routes (no token): Register, Login\nPrivate routes (token required): Refresh, Get Profile",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"secret123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.token) pm.collectionVariables.set('token', res.token);",
+                  "    if (res.refresh_token) pm.collectionVariables.set('refresh_token', res.refresh_token);",
+                  "    if (res.user && res.user.id) pm.collectionVariables.set('user_id', res.user.id);",
+                  "    pm.test('Registration successful', function () {",
+                  "        pm.expect(res.token).to.be.a('string');",
+                  "        pm.expect(res.user.email).to.eql('newuser@example.com');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Register - Duplicate Email (Error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate\",\n  \"email\": \"pitabash@example.com\",\n  \"password\": \"secret123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Duplicate email rejected', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Register - Invalid Email (Error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bad Email\",\n  \"email\": \"not-an-email\",\n  \"password\": \"secret123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid email rejected', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Register - Short Password (Error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Short Pass\",\n  \"email\": \"shortpass@example.com\",\n  \"password\": \"12345\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Short password rejected (min 6 chars)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login (Pitabash)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"pitabash@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.token) pm.collectionVariables.set('token', res.token);",
+                  "    if (res.refresh_token) pm.collectionVariables.set('refresh_token', res.refresh_token);",
+                  "    if (res.user && res.user.id) pm.collectionVariables.set('user_id', res.user.id);",
+                  "    pm.test('Login successful', function () {",
+                  "        pm.expect(res.token).to.be.a('string');",
+                  "        pm.expect(res.user.name).to.eql('Pitabash Admin');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login (John)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.token) pm.collectionVariables.set('token', res.token);",
+                  "    if (res.refresh_token) pm.collectionVariables.set('refresh_token', res.refresh_token);",
+                  "    if (res.user && res.user.id) pm.collectionVariables.set('user_id', res.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login (Jane)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.token) pm.collectionVariables.set('token', res.token);",
+                  "    if (res.refresh_token) pm.collectionVariables.set('refresh_token', res.refresh_token);",
+                  "    if (res.user && res.user.id) pm.collectionVariables.set('user_id', res.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login - Wrong Password (Error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"pitabash@example.com\",\n  \"password\": \"wrongpassword\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Wrong password rejected', function () {",
+                  "    pm.expect(pm.response.code).to.eql(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login - Non-Existent User (Error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"noone@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Non-existent user rejected', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.token) pm.collectionVariables.set('token', res.token);",
+                  "    if (res.refresh_token) pm.collectionVariables.set('refresh_token', res.refresh_token);",
+                  "    pm.test('Token refreshed', function () {",
+                  "        pm.expect(res.token).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    pm.test('Profile returned with all fields', function () {",
+                  "        pm.expect(res.id).to.be.a('string');",
+                  "        pm.expect(res.email).to.be.a('string');",
+                  "        pm.expect(res.name).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Profile - No Token (Error)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unauthorized without token', function () {",
+                  "    pm.expect(pm.response.code).to.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Devices",
+      "description": "Device CRUD endpoints.\n\nAll endpoints require JWT token (passed via Authorization header).\nThe gateway extracts userId from the token and passes X-User-Id header to device-service.\nDevices are scoped to the logged-in user.",
+      "item": [
+        {
+          "name": "List My Devices",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    pm.test('Devices list is an array', function () {",
+                  "        pm.expect(res).to.be.an('array');",
+                  "    });",
+                  "    if (res.length > 0) {",
+                  "        pm.collectionVariables.set('device_id', res[0].id);",
+                  "        pm.test('First device has expected fields', function () {",
+                  "            pm.expect(res[0].id).to.be.a('string');",
+                  "            pm.expect(res[0].name).to.be.a('string');",
+                  "            pm.expect(res[0].type).to.be.a('string');",
+                  "        });",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Device by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices/{{device_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices", "{{device_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    pm.test('Device has controls array', function () {",
+                  "        pm.expect(res.id).to.be.a('string');",
+                  "        pm.expect(res.controls).to.be.an('array');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Device - Not Found (Error)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices/00000000-0000-0000-0000-000000000000",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices", "00000000-0000-0000-0000-000000000000"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Non-existent device returns 404', function () {",
+                  "    pm.expect(pm.response.code).to.eql(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Device - LIGHT",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Balcony Light\",\n  \"type\": \"LIGHT\",\n  \"location\": {\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245,\n    \"address\": \"Bhubaneswar, Odisha\",\n    \"label\": \"Balcony\"\n  },\n  \"controls\": [\n    {\n      \"name\": \"Power\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"false\"\n    },\n    {\n      \"name\": \"Brightness\",\n      \"control_type\": \"SLIDER\",\n      \"current_value\": \"50\",\n      \"min_value\": 0,\n      \"max_value\": 100,\n      \"step\": 5\n    },\n    {\n      \"name\": \"Color\",\n      \"control_type\": \"COLOR_PICKER\",\n      \"current_value\": \"#FFE4B5\"\n    }\n  ],\n  \"mqtt_topic_prefix\": \"home/balcony\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.id) pm.collectionVariables.set('device_id', res.id);",
+                  "    pm.test('Light device created with 3 controls', function () {",
+                  "        pm.expect(res.name).to.eql('Balcony Light');",
+                  "        pm.expect(res.type).to.eql('LIGHT');",
+                  "        pm.expect(res.controls.length).to.eql(3);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Device - THERMOSTAT",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hall AC\",\n  \"type\": \"THERMOSTAT\",\n  \"location\": {\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245,\n    \"address\": \"Bhubaneswar, Odisha\",\n    \"label\": \"Hall\"\n  },\n  \"controls\": [\n    {\n      \"name\": \"Power\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"false\"\n    },\n    {\n      \"name\": \"Temperature\",\n      \"control_type\": \"SLIDER\",\n      \"current_value\": \"24\",\n      \"min_value\": 16,\n      \"max_value\": 30,\n      \"step\": 0.5\n    },\n    {\n      \"name\": \"Mode\",\n      \"control_type\": \"DROPDOWN\",\n      \"current_value\": \"Cool\",\n      \"options\": [\"Cool\", \"Heat\", \"Auto\", \"Dry\", \"Fan\"]\n    }\n  ],\n  \"mqtt_topic_prefix\": \"home/hall\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.id) pm.collectionVariables.set('device_id', res.id);",
+                  "    pm.test('Thermostat created', function () {",
+                  "        pm.expect(res.type).to.eql('THERMOSTAT');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Device - FAN",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Study Room Fan\",\n  \"type\": \"FAN\",\n  \"location\": {\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245,\n    \"address\": \"Bhubaneswar, Odisha\",\n    \"label\": \"Study Room\"\n  },\n  \"controls\": [\n    {\n      \"name\": \"Power\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"false\"\n    },\n    {\n      \"name\": \"Speed\",\n      \"control_type\": \"SLIDER\",\n      \"current_value\": \"3\",\n      \"min_value\": 1,\n      \"max_value\": 5,\n      \"step\": 1\n    }\n  ],\n  \"mqtt_topic_prefix\": \"home/study\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.id) pm.collectionVariables.set('device_id', res.id);",
+                  "    pm.test('Fan created', function () {",
+                  "        pm.expect(res.type).to.eql('FAN');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Device - CAMERA",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Backyard Camera\",\n  \"type\": \"CAMERA\",\n  \"location\": {\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245,\n    \"address\": \"Bhubaneswar, Odisha\",\n    \"label\": \"Backyard\"\n  },\n  \"controls\": [\n    {\n      \"name\": \"Recording\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"true\"\n    },\n    {\n      \"name\": \"Night Vision\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"true\"\n    },\n    {\n      \"name\": \"Resolution\",\n      \"control_type\": \"DROPDOWN\",\n      \"current_value\": \"1080p\",\n      \"options\": [\"480p\", \"720p\", \"1080p\", \"4K\"]\n    }\n  ],\n  \"mqtt_topic_prefix\": \"home/backyard\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.id) pm.collectionVariables.set('device_id', res.id);",
+                  "    pm.test('Camera created', function () {",
+                  "        pm.expect(res.type).to.eql('CAMERA');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Device - LOCK",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Back Door Lock\",\n  \"type\": \"LOCK\",\n  \"location\": {\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245,\n    \"address\": \"Bhubaneswar, Odisha\",\n    \"label\": \"Back Door\"\n  },\n  \"controls\": [\n    {\n      \"name\": \"Lock\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"true\"\n    },\n    {\n      \"name\": \"Auto Lock\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"false\"\n    }\n  ],\n  \"mqtt_topic_prefix\": \"home/backdoor\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.id) pm.collectionVariables.set('device_id', res.id);",
+                  "    pm.test('Lock created', function () {",
+                  "        pm.expect(res.type).to.eql('LOCK');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Device - SWITCH",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Water Pump\",\n  \"type\": \"SWITCH\",\n  \"location\": {\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245,\n    \"address\": \"Bhubaneswar, Odisha\",\n    \"label\": \"Rooftop\"\n  },\n  \"controls\": [\n    {\n      \"name\": \"Power\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"false\"\n    },\n    {\n      \"name\": \"Timer\",\n      \"control_type\": \"SLIDER\",\n      \"current_value\": \"30\",\n      \"min_value\": 5,\n      \"max_value\": 120,\n      \"step\": 5\n    }\n  ],\n  \"mqtt_topic_prefix\": \"home/rooftop/pump\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.id) pm.collectionVariables.set('device_id', res.id);",
+                  "    pm.test('Switch created', function () {",
+                  "        pm.expect(res.type).to.eql('SWITCH');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Device - SENSOR",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Room Humidity Sensor\",\n  \"type\": \"SENSOR\",\n  \"location\": {\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245,\n    \"address\": \"Bhubaneswar, Odisha\",\n    \"label\": \"Bedroom\"\n  },\n  \"controls\": [\n    {\n      \"name\": \"Reading\",\n      \"control_type\": \"BUTTON\",\n      \"current_value\": \"65%\"\n    }\n  ],\n  \"mqtt_topic_prefix\": \"home/bedroom/sensor\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.id) pm.collectionVariables.set('device_id', res.id);",
+                  "    pm.test('Sensor created', function () {",
+                  "        pm.expect(res.type).to.eql('SENSOR');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Device - CUSTOM",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Smart Curtain\",\n  \"type\": \"CUSTOM\",\n  \"location\": {\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245,\n    \"address\": \"Bhubaneswar, Odisha\",\n    \"label\": \"Living Room\"\n  },\n  \"controls\": [\n    {\n      \"name\": \"Open/Close\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"false\"\n    },\n    {\n      \"name\": \"Position\",\n      \"control_type\": \"SLIDER\",\n      \"current_value\": \"0\",\n      \"min_value\": 0,\n      \"max_value\": 100,\n      \"step\": 10\n    }\n  ],\n  \"mqtt_topic_prefix\": \"home/living/curtain\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.id) pm.collectionVariables.set('device_id', res.id);",
+                  "    pm.test('Custom device created', function () {",
+                  "        pm.expect(res.type).to.eql('CUSTOM');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update Device - Name Only",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices/{{device_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices", "{{device_id}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Renamed Device\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    pm.test('Device name updated', function () {",
+                  "        pm.expect(res.name).to.eql('Renamed Device');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update Device - Full Update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices/{{device_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices", "{{device_id}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fully Updated Device\",\n  \"type\": \"LIGHT\",\n  \"location\": {\n    \"latitude\": 19.0760,\n    \"longitude\": 72.8777,\n    \"address\": \"Mumbai, Maharashtra\",\n    \"label\": \"Terrace\"\n  },\n  \"controls\": [\n    {\n      \"name\": \"Power\",\n      \"control_type\": \"TOGGLE\",\n      \"current_value\": \"true\"\n    }\n  ],\n  \"mqtt_topic_prefix\": \"home/terrace\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    pm.test('Device fully updated', function () {",
+                  "        pm.expect(res.name).to.eql('Fully Updated Device');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Delete Device",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/devices/{{device_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices", "{{device_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Device deleted', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Devices - No Token (Error)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "devices"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unauthorized without token', function () {",
+                  "    pm.expect(pm.response.code).to.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Weather",
+      "description": "Weather API proxy to OpenWeatherMap.\n\nRequires JWT token and WEATHER_API_KEY to be set in the weather-service environment.\nReturns weather data for given coordinates.",
+      "item": [
+        {
+          "name": "Get Weather - Bhubaneswar (metric)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/weather?lat=20.2961&lon=85.8245&units=metric",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weather"],
+              "query": [
+                { "key": "lat", "value": "20.2961" },
+                { "key": "lon", "value": "85.8245" },
+                { "key": "units", "value": "metric" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Weather data returned', function () {",
+                  "        var res = pm.response.json();",
+                  "        pm.expect(res).to.be.an('object');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Weather - New Delhi (metric)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/weather?lat=28.6139&lon=77.2090&units=metric",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weather"],
+              "query": [
+                { "key": "lat", "value": "28.6139" },
+                { "key": "lon", "value": "77.2090" },
+                { "key": "units", "value": "metric" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Weather - Mumbai (metric)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/weather?lat=19.0760&lon=72.8777&units=metric",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weather"],
+              "query": [
+                { "key": "lat", "value": "19.0760" },
+                { "key": "lon", "value": "72.8777" },
+                { "key": "units", "value": "metric" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Weather - Bangalore (metric)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/weather?lat=12.9716&lon=77.5946&units=metric",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weather"],
+              "query": [
+                { "key": "lat", "value": "12.9716" },
+                { "key": "lon", "value": "77.5946" },
+                { "key": "units", "value": "metric" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Weather - Imperial units",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/weather?lat=20.2961&lon=85.8245&units=imperial",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weather"],
+              "query": [
+                { "key": "lat", "value": "20.2961" },
+                { "key": "lon", "value": "85.8245" },
+                { "key": "units", "value": "imperial" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Weather - No Token (Error)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/weather?lat=20.2961&lon=85.8245&units=metric",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weather"],
+              "query": [
+                { "key": "lat", "value": "20.2961" },
+                { "key": "lon", "value": "85.8245" },
+                { "key": "units", "value": "metric" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unauthorized without token', function () {",
+                  "    pm.expect(pm.response.code).to.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Internal (Direct Service Access)",
+      "description": "Internal/direct service endpoints — bypass the API Gateway.\n\nThese hit services directly on their ports (not through :8080).\nUseful for debugging and service-to-service testing.",
+      "item": [
+        {
+          "name": "Internal - Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/internal/users/{{user_id}}",
+              "host": ["http://localhost:8081"],
+              "path": ["internal", "users", "{{user_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    pm.test('Internal user lookup works', function () {",
+                  "        pm.expect(res.id).to.be.a('string');",
+                  "        pm.expect(res.email).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Internal - Eureka Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8761/actuator/health",
+              "host": ["http://localhost:8761"],
+              "path": ["actuator", "health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Eureka is healthy', function () {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Internal - Eureka Apps (Registered Services)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "http://localhost:8761/eureka/apps",
+              "host": ["http://localhost:8761"],
+              "path": ["eureka", "apps"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Eureka returns registered apps', function () {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}
