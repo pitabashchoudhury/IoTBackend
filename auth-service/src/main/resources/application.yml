@@ -24,6 +24,12 @@ app:
     access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:3600000}
     refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000}
 
+springdoc:
+  api-docs:
+    path: /auth/v3/api-docs
+  swagger-ui:
+    path: /auth/swagger-ui.html
+
 eureka:
   client:
     service-url:

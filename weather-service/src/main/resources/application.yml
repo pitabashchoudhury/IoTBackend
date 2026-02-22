@@ -14,6 +14,12 @@ app:
     api-key: ${WEATHER_API_KEY:}
     base-url: https://api.openweathermap.org
 
+springdoc:
+  api-docs:
+    path: /weather/v3/api-docs
+  swagger-ui:
+    path: /weather/swagger-ui.html
+
 eureka:
   client:
     service-url:
