@@ -1,0 +1,9 @@
+**/target/
+**/.idea/
+**/*.iml
+**/.git/
+**/.gitignore
+**/node_modules/
+**/.env
+*.md
+.claude/
